@@ -8,6 +8,16 @@ env/
 .env.*
 !.env.example
 
+# LLM / API keys and credentials — NEVER commit these
+*.key
+*.pem
+secrets.*
+.secrets/
+*_secret*
+*apikey*
+*api_key*
+*credentials*
+
 # Python
 __pycache__/
 *.py[cod]

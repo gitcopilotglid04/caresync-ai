@@ -1,13 +1,8 @@
 import requests
 import json
-import os
 import re
-from dotenv import load_dotenv
 
-load_dotenv()
-
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "llama3.2")
+from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL  # local-dev fallback only; prod uses claude_client.
 
 
 def _safe_json(response: requests.Response) -> dict:

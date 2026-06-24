@@ -1,7 +1,7 @@
 import logging
 import time
 from app.prompts import get_care_planner_system_prompt, get_care_planner_user_message
-from app.ollama_client import call_ollama, extract_json_from_response, OLLAMA_MODEL
+from app.llm import call_claude, extract_json_from_response, CLAUDE_MODEL
 from app.models import CarePlan
 
 # Set up logging — this is your audit trail
@@ -23,7 +23,7 @@ def run_care_planner_agent(discharge_summary: str) -> CarePlan:
 
     Raises:
         ValueError: if the model returns invalid or incomplete JSON
-        ConnectionError: if Ollama is not running
+        ConnectionError: if the API key is missing or Claude is unreachable
         RuntimeError: for any other unexpected failure
     """
 
@@ -34,10 +34,10 @@ def run_care_planner_agent(discharge_summary: str) -> CarePlan:
     system_prompt = get_care_planner_system_prompt()
     user_message = get_care_planner_user_message(discharge_summary)
 
-    logger.info("carePlannerAgent | Calling Ollama with model: %s", OLLAMA_MODEL)
+    logger.info("carePlannerAgent | Calling Claude with model: %s", CLAUDE_MODEL)
 
     # Step 2: Call the AI model
-    raw_response = call_ollama(system_prompt, user_message)
+    raw_response = call_claude(system_prompt, user_message)
 
     logger.info("carePlannerAgent | Raw response received | Length: %d characters", len(raw_response))
 
