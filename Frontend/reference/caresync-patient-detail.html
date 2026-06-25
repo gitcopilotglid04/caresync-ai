@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CareSync · Patient detail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS  — port these straight into your React theme.
+   Light clinical theme; structured so a dark theme is a token swap.
+   ============================================================ */
+:root{
+  --canvas:#F5F7F9; --surface:#FFFFFF; --surface-2:#EEF2F6;
+  --ink:#18222F; --ink-2:#55647A; --ink-3:#8995A6;
+  --line:#E4E9EF; --line-2:#D3DBE4;
+  --brand:#0E7490; --brand-ink:#0B5468; --brand-bg:#E2F1F4;
+
+  --risk-high:#BE3526; --risk-high-bg:#FBEAE7; --risk-high-line:#F0C3BB;
+  --warn:#946200;      --warn-bg:#FAF0D9;      --warn-line:#EDD4A0;
+  --ok:#1E7A4B;        --ok-bg:#E6F4EC;        --ok-line:#BCE2CC;
+  --info:#2C57AE;      --info-bg:#E8EEFA;       --info-line:#C7D6F2;
+
+  --r:11px; --r-sm:7px; --r-pill:999px;
+  --shadow:0 1px 2px rgba(24,34,47,.04), 0 6px 20px rgba(24,34,47,.05);
+  --shadow-sticky:0 1px 0 var(--line), 0 4px 14px rgba(24,34,47,.05);
+  --maxw:1120px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--canvas); color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:14px; line-height:1.5; font-feature-settings:"cv05","ss01";
+  -webkit-font-smoothing:antialiased;
+}
+.num{font-variant-numeric:tabular-nums}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:4px}
+
+/* ============================================================
+   APP BAR  — React: <AppBar />
+   ============================================================ */
+.appbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; gap:18px;
+  height:56px; padding:0 22px;
+  background:rgba(255,255,255,.86); backdrop-filter:saturate(1.4) blur(8px);
+  border-bottom:0.5px solid var(--line);
+}
+.brand{display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px; letter-spacing:-.01em}
+.brand .dot{width:22px; height:22px; border-radius:6px; background:var(--brand);
+  display:grid; place-items:center; color:#fff; font-size:13px; font-weight:700}
+.nav{display:flex; gap:2px; margin-left:6px}
+.nav a{padding:6px 11px; border-radius:var(--r-sm); color:var(--ink-2);
+  text-decoration:none; font-size:13.5px; font-weight:500}
+.nav a:hover{background:var(--surface-2); color:var(--ink)}
+.nav a.is-active{color:var(--brand-ink); background:var(--brand-bg)}
+.appbar-right{margin-left:auto; display:flex; align-items:center; gap:12px}
+.who{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2)}
+.who .av{width:26px; height:26px; border-radius:50%; background:var(--surface-2);
+  display:grid; place-items:center; font-size:11px; font-weight:600; color:var(--ink-2)}
+
+/* ============================================================
+   PAGE
+   ============================================================ */
+.page{max-width:var(--maxw); margin:0 auto; padding:18px 22px 64px}
+.backlink{display:inline-flex; align-items:center; gap:6px; color:var(--ink-2);
+  font-size:13px; font-weight:500; text-decoration:none; margin:4px 0 14px}
+.backlink:hover{color:var(--ink)}
+
+/* PATIENT HEADER — sticky so status stays visible. React: <PatientHeader /> */
+.phead{
+  position:sticky; top:56px; z-index:20;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  background:var(--surface); border:0.5px solid var(--line);
+  border-radius:var(--r); padding:14px 18px; box-shadow:var(--shadow-sticky);
+}
+.phead .pic{width:46px; height:46px; border-radius:13px; flex:none;
+  background:var(--risk-high-bg); color:var(--risk-high);
+  display:grid; place-items:center; font-weight:700; font-size:15px}
+.phead .who-id{min-width:170px}
+.phead .name{font-size:21px; font-weight:600; letter-spacing:-.02em; line-height:1.15}
+.phead .meta{color:var(--ink-2); font-size:13px; margin-top:2px}
+.phead .status{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+
+/* BADGES / PILLS / CHIPS — React: <RiskBadge> <UrgencyPill> <QueueRankChip> <OwnerChip> */
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600;
+  padding:5px 11px; border-radius:var(--r-pill); border:0.5px solid transparent; white-space:nowrap}
+.badge svg{width:13px; height:13px}
+.b-risk{background:var(--risk-high-bg); color:var(--risk-high); border-color:var(--risk-high-line)}
+.b-stat{background:var(--surface-2); color:var(--ink-2)}
+.b-urg-immediate{background:var(--risk-high-bg); color:var(--risk-high); border-color:var(--risk-high-line)}
+.b-urg-urgent{background:var(--warn-bg); color:var(--warn); border-color:var(--warn-line)}
+.b-urg-routine{background:var(--ok-bg); color:var(--ok); border-color:var(--ok-line)}
+.b-rank{background:var(--surface-2); color:var(--ink-2); font-variant-numeric:tabular-nums}
+.chip{font-size:11.5px; font-weight:500; padding:3px 9px; border-radius:var(--r-sm);
+  background:var(--surface-2); color:var(--ink-2); white-space:nowrap}
+.chip-owner-ai{background:var(--ok-bg); color:var(--ok)}
+.chip-owner-human{background:var(--risk-high-bg); color:var(--risk-high)}
+.chip-approve{background:var(--info-bg); color:var(--info)}
+
+/* REVIEW BANNER — React: <ReviewBanner /> */
+.banner{
+  display:flex; align-items:flex-start; gap:12px; margin-top:12px;
+  background:var(--risk-high-bg); border:0.5px solid var(--risk-high-line);
+  border-left:3px solid var(--risk-high); border-radius:var(--r); padding:13px 16px;
+}
+.banner.flash{animation:flash .9s ease}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(190,53,38,.35)}100%{box-shadow:0 0 0 14px rgba(190,53,38,0)}}
+.banner svg{width:19px; height:19px; color:var(--risk-high); flex:none; margin-top:1px}
+.banner .b-title{font-weight:600; color:var(--risk-high); font-size:14px}
+.banner .b-reason{color:var(--risk-high); font-size:13px; margin-top:3px; line-height:1.45}
+
+/* PANEL GRID — React: <Panel> wrapper, one component per card */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(296px,1fr)); gap:13px; margin-top:13px}
+.panel{background:var(--surface); border:0.5px solid var(--line); border-radius:var(--r);
+  padding:15px 17px; box-shadow:var(--shadow)}
+.panel h3{margin:0 0 11px; font-size:12.5px; font-weight:600; color:var(--ink-2);
+  letter-spacing:.02em; display:flex; align-items:center; gap:7px}
+.panel h3 svg{width:15px; height:15px; color:var(--ink-3)}
+.panel h3 .agent{margin-left:auto; font-size:11px; font-weight:500; color:var(--ink-3)}
+
+.kv{display:flex; justify-content:space-between; gap:10px; padding:7px 0;
+  border-bottom:0.5px solid var(--line); font-size:13px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--ink-2)}
+.kv .v{text-align:right; font-weight:500}
+
+/* risk factor + evidence */
+.fact{padding:8px 0; border-bottom:0.5px solid var(--line)}
+.fact:last-child{border-bottom:none}
+.fact .f-name{font-size:13px; font-weight:500}
+.fact .f-ev{font-size:12px; color:var(--ink-3); margin-top:2px; font-style:italic}
+
+/* timeline rows */
+.tl{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:0.5px solid var(--line); font-size:13px}
+.tl:last-child{border-bottom:none}
+.tl .day{font-weight:600; color:var(--brand-ink); min-width:46px; font-variant-numeric:tabular-nums}
+.tl .act{flex:1; color:var(--ink)}
+
+/* escalation item */
+.esc{padding:8px 0; border-bottom:0.5px solid var(--line)}
+.esc:last-child{border-bottom:none}
+.esc .top{display:flex; justify-content:space-between; gap:10px; align-items:center}
+.esc .e-concern{font-size:13px}
+.esc .e-why{font-size:12px; color:var(--ink-3); margin-top:3px}
+
+/* audit (mono readout = signature) */
+.audit .kv .v{font-family:var(--mono); font-size:12px; font-weight:400}
+.code{font-family:var(--mono); font-size:11.5px; padding:2px 7px; border-radius:5px;
+  background:var(--surface-2); color:var(--ink-2); display:inline-block}
+.codes{display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end}
+
+/* ============================================================
+   CHECK-IN SIMULATOR — the hero interaction. React: <CheckinSimulator />
+   ============================================================ */
+.loop{margin-top:13px; background:var(--surface); border:0.5px solid var(--line-2);
+  border-radius:var(--r); padding:17px 19px; box-shadow:var(--shadow)}
+.loop h3{margin:0 0 4px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px}
+.loop h3 svg{width:17px; height:17px; color:var(--brand)}
+.loop .sub{color:var(--ink-3); font-size:12.5px; margin:0 0 13px}
+.btns{display:flex; gap:9px; flex-wrap:wrap}
+.cbtn{display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  padding:10px 14px; border:0.5px solid var(--line-2); border-radius:var(--r-sm);
+  background:var(--surface); cursor:pointer; transition:border-color .15s, background .15s; text-align:left}
+.cbtn:hover{background:var(--surface-2); border-color:var(--brand)}
+.cbtn:active{transform:scale(.985)}
+.cbtn .d{font-weight:600; font-size:13px}
+.cbtn .s{font-size:12px; color:var(--ink-2)}
+.result{margin-top:14px; padding:14px 16px; border-radius:var(--r-sm);
+  background:var(--surface-2); border:0.5px solid var(--line); font-size:13px; color:var(--ink-2); line-height:1.55}
+.result .r-flags{margin-bottom:6px}
+.result strong{font-weight:600; color:var(--ink)}
+
+.foot{max-width:var(--maxw); margin:22px auto 0; padding:0 22px; color:var(--ink-3); font-size:12px}
+
+@media (max-width:640px){
+  .phead{position:static} .phead .status{margin-left:0; width:100%}
+  .page{padding:14px 14px 48px}
+}
+@media (prefers-reduced-motion:reduce){
+  .banner.flash{animation:none}
+  .cbtn:active{transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ⮕ React: <AppBar/> -->
+<header class="appbar">
+  <span class="brand"><span class="dot">C</span> CareSync</span>
+  <nav class="nav" aria-label="Primary">
+    <a href="#">Queue</a>
+    <a href="#" class="is-active" aria-current="page">Patient</a>
+  </nav>
+  <div class="appbar-right">
+    <span class="who"><span class="av">PR</span> Priya R · coordinator</span>
+  </div>
+</header>
+
+<main class="page">
+  <a class="backlink" href="#">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Back to queue
+  </a>
+
+  <!-- ⮕ React: <PatientHeader patient={...} /> -->
+  <section class="phead" aria-label="Patient summary">
+    <div class="pic" aria-hidden="true">RK</div>
+    <div class="who-id">
+      <div class="name">Rajesh Kumar</div>
+      <div class="meta">68 / M · NSTEMI · discharged today</div>
+    </div>
+    <div class="status">
+      <!-- ⮕ <RiskBadge level="high"/> -->
+      <span class="badge b-risk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Risk: high
+      </span>
+      <span class="badge b-stat num">Readmission 38.5%</span>
+      <!-- ⮕ <UrgencyPill> — mutated by the check-in -->
+      <span class="badge b-urg-urgent" id="urgencyPill">Urgency: urgent</span>
+      <!-- ⮕ <QueueRankChip> — mutated by the check-in -->
+      <span class="badge b-rank" id="rankChip">Queue #3</span>
+      <span class="chip">Owner: care coordinator</span>
+    </div>
+  </section>
+
+  <!-- ⮕ React: <ReviewBanner/> -->
+  <section class="banner" id="reviewBanner" role="status" aria-label="Human review status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+    <div>
+      <div class="b-title">Needs human review</div>
+      <div class="b-reason" id="bannerReason">High-risk cardiac patient living alone — a coordinator must arrange home support before Day 1. Forced by the safety floor, independent of the model.</div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- ⮕ React: <CarePlanPanel/> -->
+    <section class="panel">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Care plan<span class="agent">Agent 1</span></h3>
+      <div class="kv"><span class="k">Medications</span><span class="v">Aspirin 75 · Clopidogrel 75 · Atorvastatin 40</span></div>
+      <div class="kv"><span class="k">Follow-up</span><span class="v">Cardiology OPD 2 wks · ECG 1 wk</span></div>
+      <div class="kv"><span class="k">Complexity</span><span class="v num">7 / 10</span></div>
+    </section>
+
+    <!-- ⮕ React: <RiskPanel/> with <RiskFactor evidence=.../> -->
+    <section class="panel">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Risk &amp; evidence<span class="agent">Agent 2</span></h3>
+      <div class="fact"><div class="f-name">Recent cardiac event</div><div class="f-ev">“Diagnosed with NSTEMI; discharged today”</div></div>
+      <div class="fact"><div class="f-name">Polypharmacy</div><div class="f-ev">“Aspirin, Clopidogrel, Atorvastatin, Metformin”</div></div>
+      <div class="fact"><div class="f-name">Lives alone</div><div class="f-ev">“Social note: lives alone, daughter out of city”</div></div>
+    </section>
+
+    <!-- ⮕ React: <TimelinePanel/> with <CheckpointRow owner=.../> -->
+    <section class="panel">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>30-day timeline</h3>
+      <div class="tl"><span class="day num">Day 1</span><span class="act">Medication reconciliation</span><span class="chip">nurse</span></div>
+      <div class="tl"><span class="day num">Day 7</span><span class="act">ECG &amp; BP review</span><span class="chip">doctor</span></div>
+      <div class="tl"><span class="day num">Day 14</span><span class="act">Cardiology follow-up</span><span class="chip">doctor</span></div>
+      <div class="tl"><span class="day num">Day 30</span><span class="act">Recovery review</span><span class="chip">patient</span></div>
+    </section>
+
+    <!-- ⮕ React: <MessagesPanel/> with <MessageRow/> -->
+    <section class="panel">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message drafts<span class="agent">Agent 3</span></h3>
+      <div class="kv"><span class="k">Day 1 · confirm medicines taken</span><span class="chip chip-approve">needs approval</span></div>
+      <div class="kv"><span class="k">Day 7 · ECG appointment reminder</span><span class="chip chip-approve">needs approval</span></div>
+      <div class="kv"><span class="k">Day 14 · bring meds list to follow-up</span><span class="chip chip-approve">needs approval</span></div>
+      <div class="kv"><span class="k">Day 30 · recovery check-in</span><span class="chip chip-approve">needs approval</span></div>
+    </section>
+
+    <!-- ⮕ React: <EscalationPanel/> with <EscalationItem owner=.../> -->
+    <section class="panel">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>Escalation<span class="agent">Agent 4</span></h3>
+      <div class="esc">
+        <div class="top"><span class="e-concern">Lives alone, no home support</span><span class="chip chip-owner-human">human · urgent</span></div>
+        <div class="e-why">Arrange home support before Day 1.</div>
+      </div>
+      <div class="esc">
+        <div class="top"><span class="e-concern">Day 1 medication reminder</span><span class="chip chip-owner-ai">AI · routine</span></div>
+        <div class="e-why">Automated reminder — no human needed.</div>
+      </div>
+    </section>
+
+    <!-- ⮕ React: <AuditPanel/> — mono "instrument readout" -->
+    <section class="panel audit">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Audit &amp; explainability</h3>
+      <div class="kv"><span class="k">Model</span><span class="v">claude-sonnet-4-6</span></div>
+      <div class="kv"><span class="k">Latency · agents</span><span class="v num">4,200 ms · 4/4</span></div>
+      <div class="kv"><span class="k">Claims blocked</span><span class="v num">0</span></div>
+      <div class="kv" style="border-bottom:none"><span class="k">Rules fired</span><span class="codes"><span class="code">HIGH_RISK</span><span class="code">LIVES_ALONE</span></span></div>
+    </section>
+
+  </div>
+
+  <!-- ⮕ React: <CheckinSimulator runId=... onReassess={...}/> — the loop -->
+  <section class="loop" aria-label="Check-in simulator">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Check-in simulator</h3>
+    <p class="sub">Simulate a patient check-in during the recovery window. The signal extractor and red-flag rules run, then risk and escalation re-assess.</p>
+    <div class="btns">
+      <button class="cbtn" onclick="checkin('good')"><span class="d num">Day 1</span><span class="s">Medicines confirmed</span></button>
+      <button class="cbtn" onclick="checkin('miss')"><span class="d num">Day 7</span><span class="s">Missed ECG appointment</span></button>
+      <button class="cbtn" onclick="checkin('symptom')"><span class="d num">Day 10</span><span class="s">Chest tightness + missed doses</span></button>
+    </div>
+    <div class="result" id="ciResult" role="status" aria-live="polite">Select a check-in to run the re-assessment.</div>
+  </section>
+</main>
+
+<footer class="foot">Synthetic demo data only. Production enforces role-scoped access (HIPAA minimum-necessary · India DPDP). Decision support for clinicians — not autonomous diagnosis.</footer>
+
+<script>
+/* ⮕ React: this becomes the onReassess handler updating patient state.
+   In production the same payload comes from POST /api/checkin. */
+function setUrgency(label, kind){
+  var el = document.getElementById('urgencyPill');
+  el.className = 'badge b-urg-' + kind;
+  el.textContent = 'Urgency: ' + label;
+}
+function setRank(n){ document.getElementById('rankChip').textContent = 'Queue #' + n; }
+function flashBanner(){
+  var b = document.getElementById('reviewBanner');
+  b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+}
+
+function checkin(kind){
+  var res = document.getElementById('ciResult');
+  if(kind === 'good'){
+    setUrgency('urgent','urgent'); setRank(3);
+    res.innerHTML = '<strong>No new signals.</strong> Medication confirmed and logged to the audit trail. No escalation; queue rank unchanged.';
+  } else if(kind === 'miss'){
+    setUrgency('urgent','urgent'); setRank(2);
+    res.innerHTML = '<div class="r-flags"><span class="code">MISSED_FOLLOWUP_HIGH_RISK</span></div>'
+      + 'Signal: missed ECG appointment. A coordinator task was created. Urgency held at <strong>urgent</strong>; queue rank \u2192 <strong>#2</strong>.';
+  } else {
+    setUrgency('immediate','immediate'); setRank(1); flashBanner();
+    document.getElementById('bannerReason').textContent =
+      'A new deterioration signal in an already-high-risk patient — escalated from routine monitoring to immediate coordinator action.';
+    res.innerHTML = '<div class="r-flags"><span class="code">CARDIAC_SYMPTOM_AFTER_CARDIAC_EVENT</span> <span class="code">MISSED_CRITICAL_MEDICATION</span></div>'
+      + 'Signals: new cardiac symptom + missed doses. Risk stays <strong>high</strong>; urgency \u2192 <strong>immediate</strong>. Human review forced by the safety floor. Queue rank \u2192 <strong>#1</strong>.';
+  }
+}
+</script>
+</body>
+</html>

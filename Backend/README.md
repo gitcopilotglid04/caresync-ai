@@ -35,7 +35,8 @@ ollama pull llama3.2
 
 ## Setup
 
-From the `care-coordination-agent/` directory:
+From the `care-coordination-agent/Backend/` directory (the frontend lives in
+`care-coordination-agent/Frontend/`):
 
 ```bash
 # 1. Create and activate a virtual environment
@@ -132,22 +133,24 @@ curl -X POST http://127.0.0.1:8000/api/carePlannerAgent \
 
 ```
 care-coordination-agent/
-├── app/
-│   ├── main.py                 # FastAPI app + endpoints
-│   ├── care_planner_agent.py   # Agent 1
-│   ├── risk_assessor_agent.py  # Agent 2
-│   ├── ollama_client.py        # LLM boundary (call_ollama, JSON extraction)
-│   ├── models.py               # Pydantic schemas (CarePlan, RiskAssessment)
-│   └── prompts.py              # System + user prompts per agent
-├── streamlit_app.py            # Demo UI (calls the API over HTTP)
-├── requirements.txt            # Pinned dependencies
-├── .env.example                # Config template
-├── README.md                   # This file
-└── docs/                       # All project documentation
-    ├── API_CONTRACT.md         # API documentation
-    ├── REQUIREMENTS.md         # Full Round 2 requirements
-    ├── REQUIREMENTS.docx       # Requirements (Word version)
-    └── IMPLEMENTATION_PLAN.md  # Build plan
+├── Backend/                    # Python / FastAPI service (this folder)
+│   ├── app/
+│   │   ├── main.py             # FastAPI app + endpoints
+│   │   ├── config.py           # Central config (LLM settings, env)
+│   │   ├── models.py           # Pydantic schemas
+│   │   ├── prompts.py          # System + user prompts per agent
+│   │   ├── agents/             # Agent 1–4 implementations
+│   │   └── llm/                # LLM boundary (Claude + Ollama clients)
+│   ├── streamlit_app.py        # Demo UI (calls the API over HTTP)
+│   ├── requirements.txt        # Pinned dependencies
+│   ├── .env.example            # Config template
+│   ├── README.md               # This file
+│   └── docs/                   # Project documentation
+│       ├── API_CONTRACT.md
+│       ├── REQUIREMENTS.md
+│       ├── REQUIREMENTS.docx
+│       └── IMPLEMENTATION_PLAN.md
+└── Frontend/                   # Vite + TypeScript demo UI
 ```
 
 ---

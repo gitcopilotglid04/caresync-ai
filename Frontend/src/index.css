@@ -1,0 +1,101 @@
+@import "tailwindcss";
+@import "./theme/tokens.css";
+
+/* ============================================================
+   Tailwind theme — map CSS custom properties to utility classes.
+   All color/radius/shadow usage in components goes through these.
+   ============================================================ */
+@theme {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-bg: var(--brand-bg);
+
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-bg: var(--risk-high-bg);
+  --color-risk-high-line: var(--risk-high-line);
+
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-line: var(--warn-line);
+
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-line: var(--ok-line);
+
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-line: var(--info-line);
+
+  --radius-DEFAULT: var(--r);
+  --radius-sm: var(--r-sm);
+  --radius-pill: var(--r-pill);
+
+  --shadow-DEFAULT: var(--shadow);
+  --shadow-sticky: var(--shadow-sticky);
+  --shadow-modal: var(--modal-shadow);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--mono);
+}
+
+/* ============================================================
+   Base layer — matches the reference body styles exactly.
+   ============================================================ */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-feature-settings: "cv05", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+/* Utility: tabular-nums for clinical figures */
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Banner flash animation (from reference) */
+@keyframes banner-flash {
+  0% { box-shadow: 0 0 0 0 rgba(190, 53, 38, 0.35); }
+  100% { box-shadow: 0 0 0 14px rgba(190, 53, 38, 0); }
+}
+
+@utility animate-banner-flash {
+  animation: banner-flash 0.9s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-banner-flash {
+    animation: none;
+  }
+}

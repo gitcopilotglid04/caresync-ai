@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CareSync · Coordinator queue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SHARED TOKENS — identical to the patient detail page.
+   Keep these in one place when you port to React.
+   ============================================================ */
+:root{
+  --canvas:#F5F7F9; --surface:#FFFFFF; --surface-2:#EEF2F6;
+  --ink:#18222F; --ink-2:#55647A; --ink-3:#8995A6;
+  --line:#E4E9EF; --line-2:#D3DBE4;
+  --brand:#0E7490; --brand-ink:#0B5468; --brand-bg:#E2F1F4;
+  --risk-high:#BE3526; --risk-high-bg:#FBEAE7; --risk-high-line:#F0C3BB;
+  --warn:#946200;      --warn-bg:#FAF0D9;      --warn-line:#EDD4A0;
+  --ok:#1E7A4B;        --ok-bg:#E6F4EC;        --ok-line:#BCE2CC;
+  --info:#2C57AE;      --info-bg:#E8EEFA;       --info-line:#C7D6F2;
+  --r:11px; --r-sm:7px; --r-pill:999px;
+  --shadow:0 1px 2px rgba(24,34,47,.04), 0 6px 20px rgba(24,34,47,.05);
+  --shadow-sticky:0 1px 0 var(--line), 0 4px 14px rgba(24,34,47,.05);
+  --maxw:1120px; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--canvas); color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;}
+.num{font-variant-numeric:tabular-nums}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:4px}
+
+/* APP BAR — shared <AppBar/> */
+.appbar{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:18px;
+  height:56px; padding:0 22px; background:rgba(255,255,255,.86);
+  backdrop-filter:saturate(1.4) blur(8px); border-bottom:0.5px solid var(--line);}
+.brand{display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px; letter-spacing:-.01em}
+.brand .dot{width:22px; height:22px; border-radius:6px; background:var(--brand);
+  display:grid; place-items:center; color:#fff; font-size:13px; font-weight:700}
+.nav{display:flex; gap:2px; margin-left:6px}
+.nav a{padding:6px 11px; border-radius:var(--r-sm); color:var(--ink-2); text-decoration:none; font-size:13.5px; font-weight:500}
+.nav a:hover{background:var(--surface-2); color:var(--ink)}
+.nav a.is-active{color:var(--brand-ink); background:var(--brand-bg)}
+.appbar-right{margin-left:auto; display:flex; align-items:center; gap:12px}
+.who{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2)}
+.who .av{width:26px; height:26px; border-radius:50%; background:var(--surface-2);
+  display:grid; place-items:center; font-size:11px; font-weight:600; color:var(--ink-2)}
+.btn-primary{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600;
+  color:#fff; background:var(--brand); border:none; padding:8px 13px; border-radius:var(--r-sm); cursor:pointer}
+.btn-primary:hover{background:var(--brand-ink)}
+
+.page{max-width:var(--maxw); margin:0 auto; padding:22px}
+.h1{font-size:22px; font-weight:600; letter-spacing:-.02em; margin:0}
+.lead{color:var(--ink-2); font-size:13.5px; margin:3px 0 0}
+.head-row{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap}
+
+/* METRIC STRIP — React: <QueueStats/> */
+.metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:11px; margin:18px 0}
+.metric{background:var(--surface); border:0.5px solid var(--line); border-radius:var(--r); padding:13px 15px}
+.metric .m-label{font-size:12px; color:var(--ink-2)}
+.metric .m-val{font-size:24px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.metric.alert .m-val{color:var(--risk-high)}
+
+/* FILTERS — React: <QueueFilters/> */
+.filters{display:flex; gap:7px; margin-bottom:12px; flex-wrap:wrap}
+.fchip{font-size:13px; font-weight:500; padding:6px 13px; border-radius:var(--r-pill);
+  border:0.5px solid var(--line-2); background:var(--surface); color:var(--ink-2); cursor:pointer}
+.fchip:hover{background:var(--surface-2)}
+.fchip.is-on{background:var(--ink); color:#fff; border-color:var(--ink)}
+
+/* TABLE — React: <QueueTable/> with <QueueRow/> */
+.tablewrap{background:var(--surface); border:0.5px solid var(--line); border-radius:var(--r);
+  box-shadow:var(--shadow); overflow:hidden}
+table{width:100%; border-collapse:collapse}
+thead th{text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-3);
+  letter-spacing:.03em; padding:11px 14px; border-bottom:0.5px solid var(--line); white-space:nowrap}
+thead th.r{text-align:right}
+tbody tr{border-bottom:0.5px solid var(--line); cursor:pointer; transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.review{box-shadow:inset 3px 0 0 var(--risk-high)}
+td{padding:12px 14px; vertical-align:middle}
+td.r{text-align:right}
+.rank{font-weight:700; color:var(--ink-3); font-variant-numeric:tabular-nums; width:26px; display:inline-block}
+
+.patient{display:flex; align-items:center; gap:11px}
+.patient .av{width:34px; height:34px; border-radius:10px; flex:none; display:grid; place-items:center;
+  font-size:12px; font-weight:600; background:var(--surface-2); color:var(--ink-2)}
+.patient .av.hi{background:var(--risk-high-bg); color:var(--risk-high)}
+.patient .nm{font-weight:600; font-size:14px; letter-spacing:-.01em}
+.patient .sub{font-size:12px; color:var(--ink-3)}
+
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600;
+  padding:4px 10px; border-radius:var(--r-pill); border:0.5px solid transparent; white-space:nowrap}
+.b-risk-high{background:var(--risk-high-bg); color:var(--risk-high); border-color:var(--risk-high-line)}
+.b-risk-med{background:var(--warn-bg); color:var(--warn); border-color:var(--warn-line)}
+.b-risk-low{background:var(--ok-bg); color:var(--ok); border-color:var(--ok-line)}
+.b-urg-immediate{background:var(--risk-high-bg); color:var(--risk-high); border-color:var(--risk-high-line)}
+.b-urg-urgent{background:var(--warn-bg); color:var(--warn); border-color:var(--warn-line)}
+.b-urg-soon{background:var(--info-bg); color:var(--info); border-color:var(--info-line)}
+.b-urg-routine{background:var(--ok-bg); color:var(--ok); border-color:var(--ok-line)}
+.chip{font-size:11.5px; font-weight:500; padding:3px 9px; border-radius:var(--r-sm);
+  background:var(--surface-2); color:var(--ink-2); white-space:nowrap}
+.chip-ai{background:var(--ok-bg); color:var(--ok)}
+.chip-human{background:var(--risk-high-bg); color:var(--risk-high)}
+.signal{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-2)}
+.signal .flag{width:7px; height:7px; border-radius:50%; flex:none}
+.signal .flag.new{background:var(--risk-high)}
+.signal .flag.calm{background:var(--ink-3); opacity:.5}
+.pct{font-weight:600; font-variant-numeric:tabular-nums}
+
+.foot{max-width:var(--maxw); margin:18px auto 0; padding:0 22px; color:var(--ink-3); font-size:12px}
+
+@media (max-width:820px){
+  .col-dx,.col-pct,.col-owner{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- shared <AppBar/> -->
+<header class="appbar">
+  <span class="brand"><span class="dot">C</span> CareSync</span>
+  <nav class="nav" aria-label="Primary">
+    <a href="#" class="is-active" aria-current="page">Queue</a>
+    <a href="caresync-patient-detail.html">Patient</a>
+  </nav>
+  <div class="appbar-right">
+    <button class="btn-primary">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New patient
+    </button>
+    <span class="who"><span class="av">PR</span> Priya R · coordinator</span>
+  </div>
+</header>
+
+<main class="page">
+  <div class="head-row">
+    <div>
+      <h1 class="h1">Coordinator queue</h1>
+      <p class="lead">Discharged patients, sorted by who needs attention now. Updated as check-ins arrive.</p>
+    </div>
+  </div>
+
+  <!-- React: <QueueStats/> -->
+  <div class="metrics">
+    <div class="metric"><div class="m-label">Active patients</div><div class="m-val">5</div></div>
+    <div class="metric alert"><div class="m-label">Need human review</div><div class="m-val">2</div></div>
+    <div class="metric alert"><div class="m-label">Immediate</div><div class="m-val">1</div></div>
+    <div class="metric"><div class="m-label">New signals today</div><div class="m-val">1</div></div>
+  </div>
+
+  <!-- React: <QueueFilters value onChange/> -->
+  <div class="filters" role="tablist" aria-label="Filter queue">
+    <button class="fchip is-on" onclick="filterQ('all',this)">All</button>
+    <button class="fchip" onclick="filterQ('review',this)">Needs review</button>
+    <button class="fchip" onclick="filterQ('high',this)">High risk</button>
+  </div>
+
+  <!-- React: <QueueTable/> -->
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Patient</th>
+          <th class="col-dx">Diagnosis</th>
+          <th>Risk</th>
+          <th>Urgency</th>
+          <th class="col-pct r">Readmission</th>
+          <th>Last signal</th>
+          <th class="col-owner">Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="review" data-risk="high" data-review="1" onclick="location.href='caresync-patient-detail.html'">
+          <td><div class="patient"><span class="rank num">1</span><span class="av hi">RK</span><span><span class="nm">Rajesh Kumar</span><br><span class="sub">68 / M</span></span></div></td>
+          <td class="col-dx">NSTEMI</td>
+          <td><span class="badge b-risk-high">High</span></td>
+          <td><span class="badge b-urg-immediate">Immediate</span></td>
+          <td class="col-pct r"><span class="pct">38.5%</span></td>
+          <td><span class="signal"><span class="flag new"></span>Chest tightness · missed doses</span></td>
+          <td class="col-owner"><span class="chip chip-human">coordinator</span></td>
+        </tr>
+        <tr class="review" data-risk="high" data-review="1" onclick="location.href='caresync-patient-detail.html'">
+          <td><div class="patient"><span class="rank num">2</span><span class="av hi">MP</span><span><span class="nm">Meera Pillai</span><br><span class="sub">76 / F</span></span></div></td>
+          <td class="col-dx">Hip surgery</td>
+          <td><span class="badge b-risk-high">High</span></td>
+          <td><span class="badge b-urg-urgent">Urgent</span></td>
+          <td class="col-pct r"><span class="pct">31.0%</span></td>
+          <td><span class="signal"><span class="flag calm"></span>Lives alone · fall risk</span></td>
+          <td class="col-owner"><span class="chip chip-human">coordinator</span></td>
+        </tr>
+        <tr data-risk="med" data-review="0" onclick="location.href='caresync-patient-detail.html'">
+          <td><div class="patient"><span class="rank num">3</span><span class="av">AS</span><span><span class="nm">Anita Sharma</span><br><span class="sub">55 / F</span></span></div></td>
+          <td class="col-dx">Type 2 diabetes</td>
+          <td><span class="badge b-risk-med">Medium</span></td>
+          <td><span class="badge b-urg-soon">Soon</span></td>
+          <td class="col-pct r"><span class="pct">18.0%</span></td>
+          <td><span class="signal"><span class="flag calm"></span>Missed glucose log</span></td>
+          <td class="col-owner"><span class="chip chip-ai">AI reminder</span></td>
+        </tr>
+        <tr data-risk="med" data-review="0" onclick="location.href='caresync-patient-detail.html'">
+          <td><div class="patient"><span class="rank num">4</span><span class="av">DL</span><span><span class="nm">David Lobo</span><br><span class="sub">61 / M</span></span></div></td>
+          <td class="col-dx">COPD</td>
+          <td><span class="badge b-risk-med">Medium</span></td>
+          <td><span class="badge b-urg-soon">Soon</span></td>
+          <td class="col-pct r"><span class="pct">15.5%</span></td>
+          <td><span class="signal"><span class="flag calm"></span>Stable, on track</span></td>
+          <td class="col-owner"><span class="chip chip-ai">AI reminder</span></td>
+        </tr>
+        <tr data-risk="low" data-review="0" onclick="location.href='caresync-patient-detail.html'">
+          <td><div class="patient"><span class="rank num">5</span><span class="av">SR</span><span><span class="nm">Sunita Rao</span><br><span class="sub">49 / F</span></span></div></td>
+          <td class="col-dx">Cholecystectomy</td>
+          <td><span class="badge b-risk-low">Low</span></td>
+          <td><span class="badge b-urg-routine">Routine</span></td>
+          <td class="col-pct r"><span class="pct">7.0%</span></td>
+          <td><span class="signal"><span class="flag calm"></span>Recovering well</span></td>
+          <td class="col-owner"><span class="chip">patient</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="foot">Synthetic demo data only. One coordinator, five patients — the system surfaces the two that need a human today.</footer>
+
+<script>
+/* React: this becomes the filtered list derived from queue state. */
+function filterQ(mode, el){
+  document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('is-on')});
+  el.classList.add('is-on');
+  document.querySelectorAll('tbody tr').forEach(function(tr){
+    var show = mode === 'all'
+      || (mode === 'review' && tr.dataset.review === '1')
+      || (mode === 'high' && tr.dataset.risk === 'high');
+    tr.style.display = show ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

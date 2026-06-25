@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CareSync · New patient</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SHARED TOKENS — identical to the queue & detail pages.
+   ============================================================ */
+:root{
+  --canvas:#F5F7F9; --surface:#FFFFFF; --surface-2:#EEF2F6;
+  --ink:#18222F; --ink-2:#55647A; --ink-3:#8995A6;
+  --line:#E4E9EF; --line-2:#D3DBE4;
+  --brand:#0E7490; --brand-ink:#0B5468; --brand-bg:#E2F1F4;
+  --risk-high:#BE3526; --risk-high-bg:#FBEAE7; --risk-high-line:#F0C3BB;
+  --warn:#946200; --warn-bg:#FAF0D9; --warn-line:#EDD4A0;
+  --ok:#1E7A4B; --ok-bg:#E6F4EC; --ok-line:#BCE2CC;
+  --info:#2C57AE; --info-bg:#E8EEFA; --info-line:#C7D6F2;
+  --r:11px; --r-sm:7px; --r-pill:999px;
+  --shadow:0 1px 2px rgba(24,34,47,.04), 0 6px 20px rgba(24,34,47,.05);
+  --modal-shadow:0 18px 60px rgba(24,34,47,.22);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--canvas); color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:4px}
+
+/* faint context behind the modal */
+.appbar{display:flex; align-items:center; gap:18px; height:56px; padding:0 22px;
+  background:#fff; border-bottom:0.5px solid var(--line)}
+.brand{display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px}
+.brand .dot{width:22px; height:22px; border-radius:6px; background:var(--brand);
+  display:grid; place-items:center; color:#fff; font-size:13px; font-weight:700}
+.ghost{max-width:1120px; margin:0 auto; padding:22px; opacity:.5}
+.ghost h1{font-size:22px; font-weight:600; margin:0}
+.ghost p{color:var(--ink-2); font-size:13.5px}
+
+/* MODAL — React: <IntakeModal/> */
+.scrim{position:fixed; inset:0; background:rgba(24,34,47,.45); display:flex;
+  align-items:center; justify-content:center; padding:20px; z-index:50}
+.modal{width:100%; max-width:560px; background:var(--surface); border-radius:var(--r);
+  box-shadow:var(--modal-shadow); overflow:hidden}
+.m-head{display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:16px 20px; border-bottom:0.5px solid var(--line)}
+.m-title{font-size:16px; font-weight:600; letter-spacing:-.01em}
+.m-title .s{display:block; font-size:12.5px; font-weight:400; color:var(--ink-2); margin-top:2px}
+.x{border:none; background:none; cursor:pointer; color:var(--ink-3); padding:4px; border-radius:6px; line-height:0}
+.x:hover{background:var(--surface-2); color:var(--ink)}
+.m-body{padding:18px 20px}
+.m-foot{display:flex; justify-content:flex-end; gap:9px; padding:14px 20px; border-top:0.5px solid var(--line); background:var(--surface)}
+
+/* form */
+.field-label{display:flex; align-items:center; justify-content:space-between; font-size:12.5px;
+  font-weight:600; color:var(--ink-2); margin-bottom:6px}
+.link{font-size:12.5px; font-weight:500; color:var(--brand); background:none; border:none; cursor:pointer; padding:0}
+.link:hover{color:var(--brand-ink); text-decoration:underline}
+textarea{width:100%; min-height:128px; resize:vertical; padding:11px 12px; font:inherit; font-size:13px;
+  color:var(--ink); background:var(--surface); border:0.5px solid var(--line-2); border-radius:var(--r-sm); line-height:1.5}
+textarea:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg)}
+textarea::placeholder{color:var(--ink-3)}
+.ctx{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px}
+.ctx .full{grid-column:1 / -1}
+select{width:100%; padding:9px 11px; font:inherit; font-size:13px; color:var(--ink);
+  background:var(--surface); border:0.5px solid var(--line-2); border-radius:var(--r-sm); cursor:pointer}
+select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg)}
+.toggle{display:flex; align-items:center; gap:9px; font-size:13px; color:var(--ink); cursor:pointer; user-select:none; padding-top:6px}
+.toggle input{position:absolute; opacity:0; width:0; height:0}
+.track{width:36px; height:20px; border-radius:var(--r-pill); background:var(--line-2); position:relative; transition:background .18s; flex:none}
+.track::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .18s}
+.toggle input:checked + .track{background:var(--brand)}
+.toggle input:checked + .track::after{transform:translateX(16px)}
+
+.btn{font-size:13.5px; font-weight:600; padding:9px 15px; border-radius:var(--r-sm); cursor:pointer; border:0.5px solid var(--line-2); background:var(--surface); color:var(--ink)}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--brand); color:#fff; border-color:var(--brand)}
+.btn-primary:hover{background:var(--brand-ink)}
+.btn-primary:disabled{opacity:.55; cursor:default}
+
+/* RUNNING STATE — React: <PipelineProgress/> */
+.run{padding:6px 0}
+.run-row{display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:0.5px solid var(--line)}
+.run-row:last-child{border-bottom:none}
+.run-ico{width:22px; height:22px; flex:none; display:grid; place-items:center}
+.dotw{width:9px; height:9px; border-radius:50%; background:var(--line-2)}
+.spin{width:16px; height:16px; border:2px solid var(--brand-bg); border-top-color:var(--brand); border-radius:50%; animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tick{color:var(--ok)}
+.run-name{font-size:13.5px; font-weight:500}
+.run-name .ag{font-size:12px; color:var(--ink-3); font-weight:400; margin-left:6px}
+.run-state{margin-left:auto; font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.run-row.active .run-name{color:var(--ink)}
+.run-row.queued .run-name{color:var(--ink-3)}
+
+.done{margin-top:14px; padding:13px 15px; border-radius:var(--r-sm); background:var(--ok-bg);
+  border:0.5px solid var(--ok-line); display:none; align-items:flex-start; gap:10px}
+.done.show{display:flex}
+.done svg{color:var(--ok); flex:none; margin-top:1px}
+.done .d-t{font-weight:600; color:var(--ok); font-size:13.5px}
+.done .d-s{font-size:12.5px; color:var(--ink-2); margin-top:2px}
+
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:520px){.ctx{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="appbar"><span class="brand"><span class="dot">C</span> CareSync</span></header>
+<div class="ghost"><h1>Coordinator queue</h1><p>Discharged patients, sorted by who needs attention now.</p></div>
+
+<!-- React: <IntakeModal open onClose onComplete/> -->
+<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal">
+    <div class="m-head">
+      <div class="m-title" id="mTitle">New patient<span class="s">Paste a discharge summary to run the care pipeline.</span></div>
+      <button class="x" aria-label="Close" onclick="location.href='caresync-coordinator-queue.html'">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- INPUT STATE -->
+    <div class="m-body" id="inputState">
+      <div class="field-label"><label for="summary">Discharge summary</label><button class="link" onclick="loadSample()">Load sample</button></div>
+      <textarea id="summary" placeholder="Paste the patient's discharge summary here — diagnosis, medications, follow-up, and any social notes."></textarea>
+      <div class="ctx">
+        <div>
+          <div class="field-label">Preferred language</div>
+          <select><option>English</option><option>Hindi</option><option>Tamil</option><option>Kannada</option></select>
+        </div>
+        <div>
+          <div class="field-label">Message channel</div>
+          <select><option>WhatsApp</option><option>SMS</option><option>Email</option></select>
+        </div>
+        <div class="full">
+          <label class="toggle"><input type="checkbox" id="caregiver"><span class="track"></span>Caregiver available at home</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUNNING STATE -->
+    <div class="m-body run" id="runState" style="display:none">
+      <div class="run-row queued" id="r1"><span class="run-ico"><span class="dotw"></span></span><span class="run-name">Care planner<span class="ag">Agent 1</span></span><span class="run-state">queued</span></div>
+      <div class="run-row queued" id="r2"><span class="run-ico"><span class="dotw"></span></span><span class="run-name">Risk assessor<span class="ag">Agent 2</span></span><span class="run-state">queued</span></div>
+      <div class="run-row queued" id="r3"><span class="run-ico"><span class="dotw"></span></span><span class="run-name">Communication drafter<span class="ag">Agent 3</span></span><span class="run-state">queued</span></div>
+      <div class="run-row queued" id="r4"><span class="run-ico"><span class="dotw"></span></span><span class="run-name">Escalation + safety floor<span class="ag">Agent 4</span></span><span class="run-state">queued</span></div>
+      <div class="done" id="doneBox">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <div><div class="d-t">Care plan ready</div><div class="d-s">Risk: high · human review required · 4 agents passed</div></div>
+      </div>
+    </div>
+
+    <div class="m-foot" id="footInput">
+      <button class="btn" onclick="location.href='caresync-coordinator-queue.html'">Cancel</button>
+      <button class="btn btn-primary" id="runBtn" onclick="runPipeline()">Run pipeline</button>
+    </div>
+    <div class="m-foot" id="footDone" style="display:none">
+      <button class="btn btn-primary" onclick="location.href='caresync-patient-detail.html'">View patient</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SAMPLE = "Patient Rajesh Kumar, 68/M, admitted with chest pain and diagnosed with NSTEMI; stabilized and discharged today. Discharge meds: Aspirin 75 mg OD, Clopidogrel 75 mg OD, Atorvastatin 40 mg HS, Metformin 500 mg BD. Follow-up: Cardiology OPD in 1 week with repeat ECG; advised low-salt diabetic diet and no heavy exertion for 4 weeks. Social note: patient lives alone, daughter out of city, home nurse visit recommended.";
+function loadSample(){ document.getElementById('summary').value = SAMPLE; }
+
+/* React: runPipeline maps to POST /api/coordinate; the row states come
+   from the per-agent stream / response meta. */
+function runPipeline(){
+  document.getElementById('inputState').style.display='none';
+  document.getElementById('footInput').style.display='none';
+  document.getElementById('runState').style.display='block';
+  var ids=['r1','r2','r3','r4'], i=0;
+  function step(){
+    if(i>0){ var prev=document.getElementById(ids[i-1]);
+      prev.querySelector('.run-ico').innerHTML='<svg class="tick" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      prev.querySelector('.run-state').textContent='done'; prev.classList.remove('active'); }
+    if(i<ids.length){ var cur=document.getElementById(ids[i]);
+      cur.classList.remove('queued'); cur.classList.add('active');
+      cur.querySelector('.run-ico').innerHTML='<span class="spin"></span>';
+      cur.querySelector('.run-state').textContent='running'; i++; setTimeout(step,780); }
+    else{ document.getElementById('doneBox').classList.add('show');
+      document.getElementById('footDone').style.display='flex'; }
+  }
+  step();
+}
+</script>
+</body>
+</html>
